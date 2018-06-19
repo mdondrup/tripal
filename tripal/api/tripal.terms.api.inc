@@ -595,6 +595,8 @@ function tripal_get_vocabularies() {
  *   The form (or $widget form).
  * @param $form_state
  *   The form state.
+ * @param $default_name 
+ *   The default value for the autocomplete text field.
  * @param $title
  *   The title to give to the field set.
  * @param $description
@@ -606,34 +608,51 @@ function tripal_get_vocabularies() {
  * @param  $delta
  *   The delta value for the field if this form is being added to a field
  *   widget.
- *
+ * @param $return_form 
+ *   By default, the AJAX call will replace only the term lookup fieldset. 
+ *   However, if you need to return the entire form set this to TRUE.
+ * @param $wrapper
+ *   if $return_form == TRUE, then the wrapper ID must be provided.
  * @ingroup tripal_terms_api
  */
 function tripal_get_term_lookup_form(&$form, &$form_state, $default_name = '',
     $title = 'Vocabulary Term', $description = '', $is_required,
-    $field_name = '', $delta = 0 ) {
+    $field_name = '', $delta = 0, $return_form = FALSE, $wrapper = '') {
   
-  $ajax_wrapper_id = 'tripal-vocab-select-form-' . $delta;
+  $term_name = $default_name;
+
+  // If this is a field then we have to get the value through the field name.
   if ($field_name) {
     $ajax_wrapper_id = $field_name . '-' . $delta;
+    if(array_key_exists('input', $form_state) and array_key_exists($field_name, $form_state['input'])) {
+      $term_name = $form_state['input'][$field_name]['und'][$delta]['term_match']['term_name'];
+    }
+    $form_state['storage'][$ajax_wrapper_id]['term_match_field'] = $field_name;
+    $form_state['storage'][$ajax_wrapper_id]['term_match_delta'] = $delta;
   }
-
-  $term_name = $default_name;
-  if (array_key_exists('values', $form_state)) {
-    $term_name = $form_state['values']['term_name'];
+  // If this is not a field then get the value through a more normal way.
+  else {
+    $ajax_wrapper_id = 'tripal-vocab-select-form-' . $delta;
+    if (array_key_exists('values', $form_state) and array_key_exists('term_name', $form_state['values'])) {
+      $term_name = $form_state['values']['term_name'];
+    } 
+    if (array_key_exists('input', $form_state) and array_key_exists('term_name', $form_state['input'])) {
+      $term_name = $form_state['input']['term_name'];
+    }  
   }
-  if ($field_name and array_key_exists('input', $form_state) and array_key_exists($field_name, $form_state['input'])) {
-    $term_name = $form_state['input'][$field_name]['und'][$delta]['term_match']['term_name'];
+  if ($return_form) {
+    $form_state['storage'][$ajax_wrapper_id]['return_form'] = TRUE;
   }
+  if ($wrapper) {
+    $ajax_wrapper_id = $wrapper;
+  }
+  
 
   if (!$description) {
     $description = t('Enter the name of the term that specifies the type. ' .
       'The type must be the name of a term in a controlled vocabulary and ' .
       'the controlled vocabulary should already be loaded into this site.');
   }
-
-  $form_state['storage'][$ajax_wrapper_id]['term_match_field'] = $field_name;
-  $form_state['storage'][$ajax_wrapper_id]['term_match_delta'] = $delta;
 
   $form['term_match'] = array(
     '#type' => 'fieldset',
@@ -679,21 +698,24 @@ function tripal_get_term_lookup_form(&$form, &$form_state, $default_name = '',
     $match = array(
       'name' => $term_name,
     );
+    
     // TODO: this should not call the chado functions because we're in the
     // tripal module.
     $terms = chado_generate_var('cvterm', $match, array('return_array' => TRUE));
-    $terms = chado_expand_var($terms, 'field', 'cvterm.definition');
-    $num_terms = 0;
-    $selected_term = '';  
-
+    if (count($terms) > 0) {
+      $terms = chado_expand_var($terms, 'field', 'cvterm.definition');
+    }
+    
     // Let the user select from any matching terms. Sometimes there may be
     // more than one that match.
+    $selected_term = ''; 
+    $i = 0;
     foreach ($terms as $term) {
       // Save the user a click by setting the default value as 1 if there's
       // only one matching term.
       $default = FALSE;
       $attrs = array();
-      if ($num_terms == 0 and count($terms) == 1) {
+      if ($i == 0 and count($terms) == 1) {
         $default = TRUE;
         $attrs = array('checked' => 'checked');
       }
@@ -718,7 +740,7 @@ function tripal_get_term_lookup_form(&$form, &$form_state, $default_name = '',
           $form_state['values'][$term_element_name] == 1) {
         $selected_term = $term;
       }
-      $num_terms++;
+      $i++;
     }
     
     // Next find terms that are synonyms
@@ -734,7 +756,7 @@ function tripal_get_term_lookup_form(&$form, &$form_state, $default_name = '',
       // only one matching term.
       $default = FALSE;
       $attrs = array();
-      if ($num_terms == 0 and count($terms) == 1) {
+      if ($i == 0 and count($termsyn) == 1) {
         $default = TRUE;
         $attrs = array('checked' => 'checked');
       }
@@ -759,12 +781,12 @@ function tripal_get_term_lookup_form(&$form, &$form_state, $default_name = '',
       if (array_key_exists('values', $form_state) and array_key_exists($term_element_name, $form_state['values']) and
         $form_state['values'][$term_element_name] == 1) {
           $selected_term = $term;
-        }
-        $num_terms++;
+      }
+      $i++;
     }
     
     
-    if ($num_terms == 0) {
+    if ($i == 0) {
       $form['term_match']['terms_list']['none'] = array(
         '#type' => 'item',
         '#markup' => '<i>' . t('There is no term that matches the entered text.') . '</i>'
@@ -823,15 +845,33 @@ function tripal_get_term_lookup_form_result($form, $form_state, $field_name = ''
 function tripal_get_term_lookup_form_ajax_callback($form, $form_state) {
   $ajax_wrapper_id = $form_state['triggering_element']['#ajax']['wrapper'];
   
-  $field_name = $form_state['storage'][$ajax_wrapper_id]['term_match_field'];
-  $delta = $form_state['storage'][$ajax_wrapper_id]['term_match_delta'];
+  $field_name = '';
+  $delta = 0;
+  $return_form = FALSE;
+  if (array_key_exists('storage', $form_state)) {
+    if (array_key_exists('term_match_field', $form_state['storage'][$ajax_wrapper_id])) {
+      $field_name = $form_state['storage'][$ajax_wrapper_id]['term_match_field'];
+      $delta = $form_state['storage'][$ajax_wrapper_id]['term_match_delta'];
+    }
+    if (array_key_exists('return_form', $form_state['storage'][$ajax_wrapper_id])) {
+      $return_form = TRUE;
+    }
+  }
+  
+  
   
   // If this form is in a field then we need to dig a bit deeper to return
   // the form elements.
   if ($field_name) {
+    if ($return_form) {
+      return $form[$field_name]['und'][$delta];
+    }
     return $form[$field_name]['und'][$delta]['term_match'];
   }
   else {
-    return $form['term_match'];
+    if ($return_form) {
+      return $form;
+    }
+    return $form[$return_element];
   }
 }

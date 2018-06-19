@@ -551,138 +551,27 @@ function tripal_admin_add_type_form($form, &$form_state) {
     $form = $function($form, $form_state);
   }
 
-  $term_name = array_key_exists('values', $form_state) ? $form_state['values']['term_name'] : '';
-
-  // If no term has been selected yet then provide the auto complete field.
-  $form['term_name'] = array(
-    '#title'       => t('Content Type'),
-    '#type'        => 'textfield',
-    '#description' => t("The content type must be the name of a term in
-        a controlled vocabulary and the controlled vocabulary should
-        already be loaded into Tripal.  For example, to create a content
-        type for storing 'genes', use the 'gene' term from the
-        Sequence Ontology (SO)."),
-    '#required'    => TRUE,
-    '#default_value' => $term_name,
-    '#autocomplete_path' => "admin/tripal/storage/chado/auto_name/cvterm/",
-  );
-  $form['select_button'] = array(
-    '#type' => 'submit',
-    '#value' => t('Lookup Term'),
-    '#name' => 'select_cvterm',
-    '#ajax' => array(
-      'callback' => "tripal_admin_add_type_form_ajax_callback",
-      'wrapper' => "tripal-vocab-select-form",
-      'effect' => 'fade',
-      'method' => 'replace'
-    ),
-  );
+  $term_name = '';
+  if (array_key_exists('values', $form_state) and array_key_exists('term_name', $form_state['values'])) {
+    $term_name = $form_state['values']['term_name'];
+  }
+  if (array_key_exists('input', $form_state) and array_key_exists('term_name', $form_state['input'])) {
+    $term_name = $form_state['input']['term_name'];
+  } 
+  
   $form['#prefix'] = '<div id = "tripal-vocab-select-form">';
-  $form['#suffix'] = '</div>';
+  $form['#suffix'] = '</div>'; 
 
-  // If the term has been provided by the user then we want to search for
-  // matching terms in the database and let them select among any matches.
-  if ($term_name) {
-    $submit_disabled = TRUE;
-    $form['terms_list'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Matching Terms'),
-      '#description' => t('Please select the term the best matches the
-          content type you want to create. If the same term exists in
-          multiple vocabularies you will see more than one option below.')
-    );
-    $match = array(
-      'name' => $term_name,
-    );
-    $terms = chado_generate_var('cvterm', $match, array('return_array' => TRUE));
-    $terms = chado_expand_var($terms, 'field', 'cvterm.definition');
-    $num_terms = 0;
-    $selected_term = '';
-
-    // Let the user select from any matching terms. Sometimes there may be
-    // more than one that match.
-    foreach ($terms as $term) {
-      // Save the user a click by setting the default value as 1 if there's
-      // only one matching term. 
-      $default = FALSE;
-      $attrs = array();
-      if ($num_terms == 0 and count($terms) == 1) {
-        $default = TRUE;
-        $attrs = array('checked' => 'checked');
-      }
-      $term_element_name = 'term-' . $term->cvterm_id;
-      $form['terms_list'][$term_element_name] = array(
-        '#type' => 'checkbox',
-        '#title' =>  $term->name,
-        '#default_value' => $default,
-        '#attributes' => $attrs,
-        '#description' => '<b>Vocabulary:</b> ' . $term->cv_id->name . ' (' . $term->dbxref_id->db_id->name . ') ' . $term->cv_id->definition .
-        '<br><b>Term: </b> ' . $term->dbxref_id->db_id->name . ':' . $term->dbxref_id->accession . '.  ' .
-        '<br><b>Definition:</b>  ' . $term->definition,
-        '#ajax' => array(
-          'callback' => "tripal_admin_add_type_form_ajax_callback",
-          'wrapper' => "tripal-vocab-select-form",
-          'effect' => 'fade',
-          'method' => 'replace'
-        ),
-      );
-
-      if (array_key_exists('values', $form_state) and array_key_exists($term_element_name, $form_state['values']) and
-          $form_state['values'][$term_element_name] == 1) {
-        $selected_term = $term;
-      }
-      $num_terms++;
-    }
-    
-    
-    // Next find terms that are synonyms
-    $match = array(
-      'synonym' => $term_name,
-    );
-    $termsyn = chado_generate_var('cvtermsynonym', $match, array('return_array' => TRUE));
-    // Let the user select from any matching terms. Sometimes there may be
-    // more than one that match.
-    foreach ($termsyn as $synonym) {
-      $term = $synonym->cvterm_id;
-      // Save the user a click by setting the default value as 1 if there's
-      // only one matching term.
-      $default = FALSE;
-      $attrs = array();
-      if ($num_terms == 0 and count($terms) == 1) {
-        $default = TRUE;
-        $attrs = array('checked' => 'checked');
-      }
-      $term_element_name = 'term-' . $term->cvterm_id;
-      $form['term_match']['terms_list'][$term_element_name] = array(
-        '#type' => 'checkbox',
-        '#title' =>  $term->name,
-        '#default_value' => $default,
-        '#attributes' => $attrs,
-        '#description' => '<b>Vocabulary:</b> ' . $term->cv_id->name . ' (' . $term->dbxref_id->db_id->name . ') ' . $term->cv_id->definition .
-        '<br><b>Term: </b> ' . $term->dbxref_id->db_id->name . ':' . $term->dbxref_id->accession . '.  ' .
-        '<br><b>Definition:</b>  ' . $term->definition .
-        '<br><b>Synonym:</b> ' . $synonym->synonym,
-        '#ajax' => array(
-          'callback' => "tripal_admin_add_type_form_ajax_callback",
-          'wrapper' => "tripal-vocab-select-form",
-          'effect' => 'fade',
-          'method' => 'replace'
-        ),
-      );
-      
-      if (array_key_exists('values', $form_state) and array_key_exists($term_element_name, $form_state['values']) and
-        $form_state['values'][$term_element_name] == 1) {
-          $selected_term = $term;
-        }
-        $num_terms++;
-    }
-    if ($num_terms == 0) {
-      $form['terms_list']['none'] = array(
-        '#type' => 'item',
-        '#markup' => '<i>' . t('There is no term that matches the entered text.') . '</i>'
-      );
-      return $form;
-    }
+  $description = t("The content type must be the name of a term in " .
+    "a controlled vocabulary and the controlled vocabulary should " .
+    "already be loaded into Tripal.  For example, to create a content " .
+    "type for storing 'genes', use the 'gene' term from the " .
+    "Sequence Ontology (SO).");
+  tripal_get_term_lookup_form($form, $form_state, $term_name,
+    'Content Type', $description, TRUE, '', 0, TRUE);
+  
+  
+  if ($term_name) {    
 
     // Now let the user select where the data type will be stored.
     $form['storage'] = array(
@@ -758,6 +647,8 @@ function tripal_admin_add_type_form_validate($form, &$form_state) {
   if (array_key_exists('clicked_button', $form_state) and
       $form_state['clicked_button']['#name'] =='use_cvterm') {
 
+    $terms = tripal_get_term_lookup_form_result($form, $form_state);
+        
     $cvterm_id = NULL;
 
     // Make sure we have a cvterm selected
@@ -772,14 +663,15 @@ function tripal_admin_add_type_form_validate($form, &$form_state) {
       }
     }
 
-    if ($num_selected == 0) {
-      form_set_error('', 'Please select at least one term.');
+    if (count($terms) == 0) {
+      form_set_error('term_match][term_name', 'Please select at least one term by clicking a checkbox beside the desired term.');
     }
-    else if ($num_selected > 1) {
-      form_set_error('term-' . $cvterm_id, 'Please select only one term from the list below.');
+    else if (count($terms) > 1) {
+      form_set_error('term_match][term_name', 'Please select only one term from the list below.');
     }
     else {
       // Add the term to the form state so we can access it later.
+      $term = $terms[0];
       $form_state['term']['vocabulary'] = $term->dbxref_id->db_id->name;
       $form_state['term']['accession'] = $term->dbxref_id->accession;
       $form_state['term']['term_name'] = $term->name;

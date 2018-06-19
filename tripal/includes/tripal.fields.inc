@@ -503,7 +503,7 @@ function tripal_field_instance_settings_form_alter(&$form, $form_state) {
   // function.  To make it work we have to add a process function. Inisde
   // of that process function is where the form additions get added that use
   // Ajax.
-  $form['field_term'][$language->language][0]['#process'] = array('tripal_field_instance_settings_form_alter_process');
+  $form['term_match'][$language->language][0]['#process'] = array('tripal_field_instance_settings_form_alter_process');
   $form['#submit'][] = 'tripal_field_instance_settings_form_submit';
 }
 
@@ -574,16 +574,6 @@ function tripal_field_instance_settings_form_alter_process($element, &$form_stat
     'colgroups' => array(),
     'empty' => '',
   );
-
-  $description = t('All fields attached to a Tripal-based content type must
-        be associated with a controlled vocabulary term.  Please use caution
-        when changing the term for this field as other sites may expect this term
-        when querying web services.');
-  if (array_key_exists('term_fixed', $instance['settings']) and $instance['settings']['term_fixed']) {
-    $description = t('All fields attached to a Tripal-based content type must
-        be associated with a controlled vocabulary term. This field mapping is
-        required and cannot be changed');
-  }
   $element['term_vocabulary'] = array(
     '#type' => 'value',
     '#value' => $vocabulary,
@@ -596,90 +586,33 @@ function tripal_field_instance_settings_form_alter_process($element, &$form_stat
     '#type' => 'value',
     '#value' => $accession,
   );
-  $element['field_term'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Controlled Vocabulary Term',
-    '#description' => $description,
-    '#prefix' => '<div id = "tripal-field-term-fieldset">',
-    '#suffix' => '</div>',
-  );
-  $element['field_term']['details'] = array(
+  
+  // If this field mapping is fixed then don't let the user change it.
+  if (!array_key_exists('term_fixed', $instance['settings']) or $instance['settings']['term_fixed'] != TRUE) {
+    $description = t('All fields attached to a Tripal-based content type must
+        be associated with a controlled vocabulary term.  Please use caution
+        when changing the term for this field as other sites may expect this term
+        when querying web services.');
+    tripal_get_term_lookup_form($element, $form_state, $term_name,
+      'Controlled Vocabulary Term', $description, TRUE);
+  }
+  else {
+    $element['term_match'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Controlled Vocabulary Term',
+      '#description' => t('All fields attached to a Tripal-based content type must ' .
+        'be associated with a controlled vocabulary term. This field mapping is ' .
+        'required and cannot be changed'),
+      '#prefix' => '<div id = "tripal-field-term-fieldset">',
+      '#suffix' => '</div>',
+    );
+  }
+  $element['term_match']['details'] = array(
     '#type' => 'item',
     '#title' => 'Current Term',
     '#markup' => theme_table($table),
   );
-
-  // If this field mapping is fixed then don't let the user change it.
-  if (!array_key_exists('term_fixed', $instance['settings']) or $instance['settings']['term_fixed'] != TRUE) {
-    $element['field_term']['new_name'] = array(
-      '#type' => 'textfield',
-      '#title' => 'Change the term',
-      // TODO: This autocomplete path should not use Chado.
-      '#autocomplete_path' => "admin/tripal/storage/chado/auto_name/cvterm/",
-    );
-    $element['field_term']['select_button'] = array(
-      '#type' => 'button',
-      '#value' => t('Lookup Term'),
-      '#name' => 'select_cvterm',
-      '#ajax' => array(
-        'callback' => "tripal_fields_select_term_form_ajax_callback",
-        'wrapper' => "tripal-field-term-fieldset",
-        'effect' => 'fade',
-        'method' => 'replace'
-      ),
-    );
-  }
-
-  // If a new term name has been specified by the user then give some extra
-  // fields to clarify the term.
-  $term_name = '';
-  if (array_key_exists('values', $form_state) and array_key_exists('new_name', $form_state['values'])) {
-    $term_name = array_key_exists('values', $form_state) ? $form_state['values']['new_name'] : '';
-  }
-  if (array_key_exists('input', $form_state) and array_key_exists('new_name', $form_state['input'])) {
-    $term_name = array_key_exists('input', $form_state) ? $form_state['input']['new_name'] : '';
-  }
-  if ($term_name) {
-    $element['field_term']['instructions'] = array(
-      '#type' => 'item',
-      '#title' => 'Matching terms',
-      '#markup' => t('Please select the term the best matches the
-        content type you want to associate with this field. If the same term exists in
-        multiple vocabularies you will see more than one option below.')
-    );
-    $match = array(
-      'name' => $term_name,
-    );
-    $terms = chado_generate_var('cvterm', $match, array('return_array' => TRUE));
-    $terms = chado_expand_var($terms, 'field', 'cvterm.definition');
-    $num_terms = 0;
-    foreach ($terms as $term) {
-      // Save the user a click, by setting the default value as 1 if there's
-      // only one matching term.
-      $default = FALSE;
-      $attrs = array();
-      if ($num_terms == 0 and count($terms) == 1) {
-        $default = TRUE;
-        $attrs = array('checked' => 'checked');
-      }
-      $element['field_term']['term-' . $term->cvterm_id] = array(
-        '#type' => 'checkbox',
-        '#title' =>  $term->name,
-        '#default_value' => $default,
-        '#attributes' => $attrs,
-        '#description' => '<b>Vocabulary:</b> ' . $term->cv_id->name . ' (' . $term->dbxref_id->db_id->name . ') ' . $term->cv_id->definition .
-        '<br><b>Term: </b> ' . $term->dbxref_id->db_id->name . ':' . $term->dbxref_id->accession . '.  ' .
-        '<br><b>Definition:</b>  ' . $term->definition,
-      );
-      $num_terms++;
-    }
-    if ($num_terms == 0) {
-      $element['field_term']['none'] = array(
-        '#type' => 'item',
-        '#markup' => '<i>' . t('There is no term that matches the entered text.') . '</i>'
-      );
-    }
-  }
+    
   $element['#element_validate'][] = 'tripal_field_instance_settings_form_alter_validate';
   return $element;
 }
@@ -687,9 +620,9 @@ function tripal_field_instance_settings_form_alter_process($element, &$form_stat
 /**
  * Implements an AJAX callback for the tripal_field_vocab_select_term_form.
  */
-function tripal_fields_select_term_form_ajax_callback($form, $form_state) {
-  return $form['field_term'];
-}
+// function tripal_fields_select_term_form_ajax_callback($form, $form_state) {
+//   return $form['field_term'];
+// }
 /**
  * Validate our custom instance settings form fields.
  */
@@ -697,7 +630,6 @@ function tripal_field_instance_settings_form_alter_validate($form, &$form_state)
 
   // If the user clicked the submit button then we want set the
   // instance settings values accordingly.
-
   if (array_key_exists('clicked_button', $form_state) and $form_state['clicked_button']['#executes_submit_callback'] == TRUE) {
     $has_default = FALSE;
     if ($form_state['values']['term_vocabulary']) {
@@ -706,47 +638,24 @@ function tripal_field_instance_settings_form_alter_validate($form, &$form_state)
       $form_state['values']['instance']['settings']['term_name'] = $form_state['values']['term_name'];
       $has_default = TRUE;
     }
+    
+    $terms = tripal_get_term_lookup_form_result($form, $form_state);
 
-    $started_new_term = FALSE;
-    if (array_key_exists('new_name', $form_state['values']) and $form_state['values']['new_name']) {
-      $started_new_term = TRUE;
+    if (count($terms) > 1) {
+      form_set_error('term_match][term_name', 'Please select only one term ' .
+          'from the "Controlled Vocabulary Term" section below.');
     }
-
-    $num_selected = 0;
-    $selected_term = FALSE;
-    foreach ($form_state['input'] as $key => $value) {
-
-      $matches = array();
-
-      if (preg_match("/^term-(\d+)$/", $key, $matches) and
-          $form_state['input']['term-' . $matches[1]]) {
-        $cvterm_id = $matches[1];
-        // TODO: this should not call a Chado function, but the autocomplete
-        // currently uses chado cvterm IDs.
-        $term = chado_generate_var('cvterm', array('cvterm_id' => $cvterm_id));
-        if ($term) {
-          $form_state['values']['instance']['settings']['term_vocabulary'] = $term->dbxref_id->db_id->name;
-          $form_state['values']['instance']['settings']['term_accession'] = $term->dbxref_id->accession;
-          $form_state['values']['instance']['settings']['term_name'] = $term->name;
-          $selected_term = TRUE;
-          $num_selected++;
-          $has_default =  TRUE;
-        }
+    if (count($terms) == 0) {
+      if (!$has_default) {
+        form_set_error('term_match][term_name', 'Please select a controlled ' . 
+           'vocabulary term and be sure to select a checkbox before saving.');
       }
     }
-
-    if ($num_selected > 1) {
-      form_set_error('term-', 'Please select only one term
-          from the "Controlled Vocabulary Term" section below.');
-    }
-    if ($started_new_term and !$selected_term) {
-      form_set_error('term-', 'Please select a controlled vocabulary term for
-          from the "Controlled Vocabulary Term" section below.');
-    }
-    if (!$has_default) {
-      form_set_error('new_name', 'Fields attached to this content type must ' .
-          'be associated with a controlled vocabulary term. Please ' .
-          'provide one below.');
+    if (count($terms) == 1) {
+      $term = $terms[0];
+      $form_state['values']['instance']['settings']['term_vocabulary'] = $term->dbxref_id->db_id->name;
+      $form_state['values']['instance']['settings']['term_accession'] = $term->dbxref_id->accession;
+      $form_state['values']['instance']['settings']['term_name'] = $term->name;
     }
   }
 }
