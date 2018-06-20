@@ -245,7 +245,6 @@ function tripal_get_remote_content($site_id, $path = '', $query = '') {
   // TODO: something is wrong here, the query is not being recognized on
   // the remote Tripal site. It's just returning the default.
   $data = drupal_http_request($ws_url);
-
   if (!$data) {
     tripal_report_error('tripal_ws', TRIPAL_ERROR,
         t('Could not connect to the remote web service.'));
@@ -263,14 +262,12 @@ function tripal_get_remote_content($site_id, $path = '', $query = '') {
 
   // We got a response, so convert it to a PHP array.
   $data = drupal_json_decode($data->data);
-
   // Check if there was a Tripal Web Services error.
   if (array_key_exists('error', $data)) {
     $error = '</pre>' . print_r($data['error'], TRUE) . '</pre>';
     tripal_report_error('tripal_ws', TRIPAL_ERROR,
         'Tripal remote web services reports the following error: !error. Using URL: !url',
         array('!error' => $error, '!url' => $ws_url));
-    return FALSE;
   }
 
   return $data;

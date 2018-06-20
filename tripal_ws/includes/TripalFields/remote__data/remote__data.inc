@@ -136,6 +136,7 @@ class remote__data extends WebServicesField {
     $entity->{$field_name}['und'][0] = array(
       'value' => array(),
       'remote_entity' => array(),
+      'error' => NULL,
     );
 
     // If this field is being loaded via web services then just return.
@@ -143,7 +144,7 @@ class remote__data extends WebServicesField {
       return;
     }
 
-    // Get the query set by the admin for this field and replace any tokesn
+    // Get the query set by the admin for this field and replace any tokens
     $query_str = $this->instance['settings']['data_info']['query'];
     $bundle = tripal_load_bundle_entity(array('name' => $entity->bundle));
     $query_str = tripal_replace_entity_tokens($query_str, $entity, $bundle);
@@ -157,8 +158,9 @@ class remote__data extends WebServicesField {
     $total_items = $data['totalItems'];
 
     // Iterate through the members returned and save those for the field.
-    for ($i = 0; $i < count($data['members']); $i++) {
-      $member = $data['members'][$i];
+    for ($i = 0; $i < $total_items; $i++) {
+      $member = $data['member'][$i];
+
 
       // Get the cotent type and remote entity id
       $content_type = $member['@type'];
@@ -176,16 +178,14 @@ class remote__data extends WebServicesField {
       // Next get the the details about this member.
       $query_field_url =  $content_type . '/' . $remote_entity_id . '/' . $query_field;
       $field_data = $this->makeRemoteRequest($query_field_url);
+
       if(!$field_data){
         // If we encounter any type of error, we'll reset the field and return.
-        $entity->{$field_name}['und'] = array();
-        $entity->{$field_name}['und'][0] = array(
-          'value' => array(),
-          'remote_entity' => array(),
-        );
+        $entity->{$field_name}['und'][$i]['value'] = 'Unable to retrieve remote content';
+        $entity->{$field_name}['und'][$i]['error'] = TRUE;
         return;
       }
-
+      
       // Set the field data as the value.
       $field_data_type = $field_data['@type'];
       $entity->{$field_name}['und'][$i]['value'] = $field_data;
@@ -199,13 +199,12 @@ class remote__data extends WebServicesField {
     *   website.
     */
    private function makeRemoteRequest($query) {
-     $ctype = $query;
-     $qdata = '';
+     $path = $query;
+     $q = '';
      if (preg_match('/\?/', $query)) {
-       list($ctype, $qdata) = explode('?', $query);
+       list($path, $q) = explode('?', $query);
      }
-
-     $data = tripal_get_remote_content($this->remote_site->id, $query);
+     $data = tripal_get_remote_content($this->remote_site->id, $path, $q);
 
      return $data;
    }
@@ -259,8 +258,20 @@ class remote__data extends WebServicesField {
     $element['data_info']['query'] = array(
       '#type' => 'textarea',
       '#title' => 'Query to Execute',
-      '#description' => 'Build the query string that should be appended after the url. The tokens
-      listed below may be used in your query build.',
+      '#description' => 'Enter the query that will retreive the remote records. ' . 
+        'If the full URL to the content web service is ' .
+        'https://[tripal_site]/web-services/content/v0.1/. Then this field should ' .
+        'contain the text immediately after the content/v0.1 portion of the URL. ' .
+        'For information about building web services queries see the ' .
+        'online documentation at ' . l('The Tripal v3 User\'s Guide', 'http://tripal.info/tutorials/v3.x/web-services') . '. ' . 
+        'For example, suppose this field is attached to an ' .
+        'Organism content type on the local site, and you want to retrieve a ' .
+        'field for the same organism on a remote Tripal site then you will ' .
+        'want to query on the genus and species. Also, you want the genus and ' .
+        'species to match the organism that this field is attached to. You can ' .
+        'use tokens to do this (see the "Available Tokesn" fieldset below). ' .
+        'For this example, the query text should be ' . 
+        'Organism?genus=[taxrank__genus]&species=[taxrank__species].',
       '#default_value' => $this->instance['settings']['data_info']['query'],
       '#rows' => 5,
       '#required' => TRUE
