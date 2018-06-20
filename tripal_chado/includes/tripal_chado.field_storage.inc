@@ -53,6 +53,7 @@ function tripal_chado_field_storage_write($entity_type, $entity, $op, $fields) {
   elseif ($type_field and !$linker) {
     $values[$type_field] = $cvterm->cvterm_id;
   }
+
   $base_record_id = tripal_chado_field_storage_write_table($base_table, $values, $base_table);
   if (!$base_record_id) {
     throw new Exception('Unable to write fields to Chado: ' . print_r($field_items, TRUE));
