@@ -71,7 +71,7 @@ class TripalFieldQuery extends EntityFieldQuery {
    */
   public function execute() {
     // Initialize the results array.
-    $results = array();
+    $results = array('first_results' => TRUE);
     
     // Give a chance for other modules to alter the query.
     drupal_alter('entity_query', $this);
@@ -126,12 +126,10 @@ class TripalFieldQuery extends EntityFieldQuery {
    * Generates an intersection of results from different storage back-ends.
    */
   protected function _intersectResults($current_results, $new_results) {
-    if ($this->count) {
-      return $new_results;
-    }
+
     // If we currently don't have any results then just allow all through.
     // This is the first result set.
-    if (empty($current_results)) {
+    if (array_key_exists('first_results', $current_results)) {
       return $new_results;
     }
     
