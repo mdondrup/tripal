@@ -111,6 +111,8 @@ function tripal_views_data_alter(&$data) {
       } 
     }
   }
+  dpm(array_keys($data));
+  dpm($data['field_data_field_pub_tags']);
 }
 /**
  * Integreates the Tripal fields with Views.
@@ -246,6 +248,37 @@ function tripal_views_data_tripal_entity(&$data) {
       'sort' => array(
         'handler' => 'tripal_views_handler_sort',
       ),
+    );
+    
+    $data[$table]['created'] = array(
+      'title' => t('Create Date'),
+      'help' => t('The date the record was created.'),
+      'field' => array(
+        'handler' => 'tripal_views_handler_field_date',
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'tripal_views_handler_sort_date',
+      ),
+      'filter' => array(
+        'handler' => 'tripal_views_handler_filter_date',
+      ),
+      
+    );
+    
+    $data[$table]['changed'] = array(
+      'title' => t('Change Date'),
+      'help' => t('The date the record was changed or updated..'),
+      'field' => array(
+        'handler' => 'tripal_views_handler_field_date',
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'tripal_views_handler_sort_date',
+      ),
+      'filter' => array(
+        'handler' => 'tripal_views_handler_filter_date',
+      ),     
     );
   }
 }

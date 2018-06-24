@@ -118,21 +118,26 @@ function tripal_field_storage_query($query) {
   // Add in any sorting to the query.
   foreach ($query->order as $index => $sort) {
     $field = $sort['specifier']['field'];
-    // Skip sorts that don't belong to this storage type.
-    if ($field['storage']['type'] != 'tripal_no_storage') {
-      continue;
-    }
     $direction = $sort['direction'];
-
-    // Filtering on the content type is a filter using the label
-    if ($field['field_name'] == 'content_type') {
-      $select->orderBy('TB.label', $direction);
+    
+    // Add in property ordering then the property is a column
+    // of the tripal_entity table.
+    if ($sort['type'] == 'property') {
+      // Filtering on the content type is a filter using the label
+      if ($field['field_name'] == 'content_type') {
+        $select->orderBy('TB.label', $direction);
+      }
+      else {
+        $select->orderBy('TE.' . $field, $direction);
+      }
     }
   }
   
   // Add a range of records to retrieve
+  // TODO: how do we deal with a range when we may have multiple
+  // backends.
   if ($query->range) {
-    $select->range($query->range['start'], $query->range['length']);
+//    $select->range($query->range['start'], $query->range['length']);
   }
   
   // Only include records that are deleted.  Tripal doesn't keep track of
@@ -144,9 +149,10 @@ function tripal_field_storage_query($query) {
     $select->where('1=0');
   }
 
-//   dpm($query);
-//   dpm($select->__toString());
-//   dpm($select->getArguments());
+   // Please do not remove dpms here they help with debugging.
+   // dpm($query);
+   // dpm($select->__toString());
+   // dpm($select->getArguments());
   
   // Perform the query and return the results.
   $entities = $select->execute();

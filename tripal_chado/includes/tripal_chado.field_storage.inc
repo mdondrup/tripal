@@ -604,8 +604,10 @@ function tripal_chado_field_storage_query($query) {
   $cquery->join('tripal_entity', 'TE', "CE.entity_id = TE.id");
   $cquery->fields('CE', array('entity_id'));
   $cquery->fields('TE', array('bundle'));
+  
+  // TODO: how do we deal with a range with multiple backends.
   if (array_key_exists('start', $query->range)) {
-    $cquery->range($query->range['start'], $query->range['length']);
+//    $cquery->range($query->range['start'], $query->range['length']);
   }
   // Make sure we only get records of the correct entity type
   $cquery->condition('TE.bundle', $query->entityConditions['bundle']['value']);
@@ -668,9 +670,12 @@ function tripal_chado_field_storage_query($query) {
 
   // Now set any ordering.
   foreach ($query->order as $index => $sort) {
-    // Add in property ordering.
+    // Add in property ordering then the property is a column
+    // of the tripal_entity table.
     if ($sort['type'] == 'property') {
-       // TODO: support ordering by bundle properties.
+      $field = $sort['specifier']['field'];
+      $direction = $sort['direction'];
+      $cquery->orderBy('TE.' . $field, $direction);
     }
     // Add in filter ordering
     if ($sort['type'] == 'field') {

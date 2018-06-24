@@ -92,7 +92,7 @@ class TripalFieldQuery extends EntityFieldQuery {
 
       // Iterate through the field storage types and call each one.
       foreach ($this->field_storage as $storage_type => $storage_module) {
-        $callback = $this->queryStorageCallback($storage_module);
+        $callback = $storage_module . '_field_storage_query';
         $st_results = call_user_func($callback, $this);
         $results = $this->_intersectResults($results, $st_results);
       }
@@ -100,21 +100,14 @@ class TripalFieldQuery extends EntityFieldQuery {
             
     // If we have relationships, then handle those.
     if (!empty($this->relationships)) {
-      $st_results = tripal_field_storage_query($this);
+      $callback = 'tripal_field_storage_query';
+      $st_results = call_user_func($callback, $this);
       $results = $this->_intersectResults($results, $st_results);
-      
-      // Are there any other callbacks that need running other than
-      // propertyQuery as we would have run those with the relationships.
-      $callback = $this->queryCallback();
-      if ($callback != 'propertyQuery' and $callback != 'tripal_field_storage_query') {
-        $st_results = call_user_func($callback, $this);
-        $results = $this->_intersectResults($results, $st_results);
-      }
     }
     // There are no fields or relationships so just use the default 
     // callback for the query.
     else if (!$this->fields){
-      $callback = $this->queryCallback();
+      $callback = 'tripal_field_storage_query';
       $st_results = call_user_func($callback, $this);
       $results = $this->_intersectResults($results, $st_results);
     }
@@ -196,42 +189,39 @@ class TripalFieldQuery extends EntityFieldQuery {
       throw new EntityFieldQueryException(t("Field storage engine not found."));
     }
   }
-
+  
   /**
-   * Determines the query callback to use for this entity query.
-   *
-   * This function is a replacement for queryCallback() from the
-   * parent EntityFieldQuery class because that class only allows a single
-   * storage type per query.
-   *
-   * @param $storage
-   *   The storage module
-   *
-   * @throws EntityFieldQueryException
-   * @return
-   *   A callback that can be used with call_user_func().
-   *
    */
-  protected function queryStorageCallback($storage) {
-    
-    // Use the override from $this->executeCallback. It can be set either
-    // while building the query, or using hook_entity_query_alter().
-    if (function_exists($this->executeCallback)) {
-      return $this->executeCallback;
+  public function fieldOrderBy($field, $column, $direction = 'ASC') {
+    if (is_scalar($field)) {
+      $field_definition = field_info_field($field);
+      if (empty($field_definition)) {
+        $this->order[] = array(
+          'type' => 'property',
+          'specifier' => array(
+            'field' => $field,
+            'index' => $index,
+            'column' => $column,
+          ),
+          'direction' => $direction,
+        );
+        return $this;
+      }
+      $field = $field_definition;
     }
     
-    // If there are no field conditions and sorts, and no execute callback
-    // then we default to querying entity tables in SQL.
-    if (empty($this->fields)) {
-      return array($this, 'propertyQuery');
-    }
-
-    if ($storage) {
-      // Use hook_field_storage_query() from the field storage.
-      return $storage . '_field_storage_query';
-    }
-    else {
-      throw new EntityFieldQueryException(t("Field storage engine not found."));
-    }
+    // Save the index used for the new field, for later use in field storage.
+    $index = count($this->fields);
+    $this->fields[$index] = $field;
+    $this->order[] = array(
+      'type' => 'field',
+      'specifier' => array(
+        'field' => $field,
+        'index' => $index,
+        'column' => $column,
+      ),
+      'direction' => $direction,
+    );
+    return $this;
   }
 }
