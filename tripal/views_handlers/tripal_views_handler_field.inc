@@ -46,7 +46,6 @@ class tripal_views_handler_field extends views_handler_field {
    *   Optional name of the field where the value is stored.
    */
   function get_value($values, $field = NULL) {
-
     $alias = isset($field) ? $this->aliases[$field] : $this->field_alias;
 
     // For some reason the alias isn't being added to the $this->aliases
@@ -60,6 +59,12 @@ class tripal_views_handler_field extends views_handler_field {
     }
     if (isset($values->{$alias})) {
       return $values->{$alias};
+    }
+    else {
+      $entity = $values->entity;
+      if (isset($entity->{$alias})) {
+        return $entity->{$alias};
+      }
     }
   }
 
