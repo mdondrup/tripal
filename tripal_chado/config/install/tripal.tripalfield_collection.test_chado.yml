@@ -1,0 +1,72 @@
+id: 'test_chado'
+label: 'Default Chado Fields'
+description: 'Default fields configurations provided by the Tripal Chado module'
+fields:
+
+## Organism ##
+## Chado Table: organism
+## Required Columns: genus (varchar 255), species (varchar 255), type_id (cvterm FK), infraspecific_name (varchar 1024)
+## Optional columns: abbreviation (varchar 255), common_name (varchar 255), comment (text)
+## Related: organismprop, organism_dbxref, organism_pub, organims_relationship, organism_cvterm,
+##          feature, library, stock, biomaterial, cell_line,
+##          featuremap_organism, phenotype_comparison, phylonode_organism
+
+    -   name: test_organism_genus_2
+        content_type: test_organism_4
+        label: TestGenus_2
+        type: chado_string_type_default
+        description: "The genus name of the organism."
+        cardinality: 1
+        required: true
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: organism
+                base_column: genus
+            max_length: 255
+        settings:
+            termIdSpace: TAXRANK
+            termAccession: "0000005"
+        display:
+            view:
+                default:
+                    region: content
+                    label: above
+                    weight: 10
+                    settings:
+                      field_prefix: '<em>'
+                      field_suffix: '</em>'
+            form:
+                default:
+                    region: content
+                    weight: 10
+
+    -   name: test_organism_species_2
+        content_type: test_organism_4
+        label: TestSpecies_1
+        type: chado_string_type_default
+        description: "The species name of the organism."
+        cardinality: 1
+        required: true
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: organism
+                base_column: species
+            max_length: 255
+        settings:
+            termIdSpace: TAXRANK
+            termAccession: "0000006"
+        display:
+            view:
+                default:
+                    region: content
+                    label: above
+                    weight: 15
+                    settings:
+                      field_prefix: '<em>'
+                      field_suffix: '</em>'
+            form:
+                default:
+                    region: content
+                    weight: 15

@@ -1,0 +1,19 @@
+id: 'test_chado'
+label: 'Test General Content Types (Chado)'
+description: 'More generalized content types based on Chado, which all Tripal sites should have.'
+content_types:
+
+    -   label: TestOrganism_3
+        term: OBI:0100026
+        help_text: Use the organism page for an individual living system, such as animal, plant, bacteria or virus,
+        category: Test3
+        id: test_organism_4
+        title_format: "<em>[organism_genus] [organism_species]</em> [organism_infraspecific_type] <em>[organism_infraspecific_name]</em>"
+        url_format: "test_organism/[TripalEntity__entity_id]"
+        views_data: 'Drupal\tripal\Entity\TripalDefaultEntityViewsData'
+        synonyms:
+            - bio_data_111
+        settings:
+            chado_base_table: organism
+
+ 
