@@ -95,12 +95,17 @@ class TripalEntityTypeCollection implements ContainerInjectionInterface  {
 
       /** @var \Drupal\Core\Config\ImmutableConfig $config **/
       $config_item = $yaml_prefix . $config_id;
+     
       $config = $config_factory->get($config_item);
-
+      
+      $this->logger->notice("Creating Tripal Content Types from: " . $config_item);
+      if (empty($config->get("label"))) {
+        $this->logger->error("Couldn't load config from $config_item !"); 
+      }
       if (is_object($config)) {
         $label = $config->get('label');
 
-        $this->logger->notice("Creating Tripal Content Types from: " . $label);
+        $this->logger->notice("Creating Tripal Content Types with label " . $label);
 
         // Iterate through each of the content types in the config.
         $content_types = $config->get('content_types');
@@ -297,7 +302,7 @@ class TripalEntityTypeCollection implements ContainerInjectionInterface  {
       ];
       $form_display = $storage->create($form_details, 'entity_view_display');
       if (!$form_display->save()) {
-        $logger->error(t('Creation of content type, "@type", default form mode failed. The provided details were: ',
+        $this->logger->error(t('Creation of content type, "@type", default form mode failed. The provided details were: ',
             ['@type' => $details['label']]) . print_r($details));
       }
     }

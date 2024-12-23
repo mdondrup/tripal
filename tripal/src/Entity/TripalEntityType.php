@@ -20,6 +20,7 @@ use Drupal\tripal\TripalVocabTerms\TripalTerm;
  *   ),
  *   handlers = {
  *     "list_builder" = "Drupal\tripal\ListBuilders\TripalEntityTypeListBuilder",
+ *      "views_data" = "Drupal\tripal\Entity\TripalDefaultEntityViewsData",
  *     "form" = {
  *       "add" = "Drupal\tripal\Form\TripalEntityTypeForm",
  *       "edit" = "Drupal\tripal\Form\TripalEntityTypeForm",

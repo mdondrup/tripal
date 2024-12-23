@@ -15,7 +15,7 @@ class TripalEntityViewsData extends EntityViewsData implements EntityViewsDataIn
    */
   public function getViewsData() {
     $data = parent::getViewsData();
-
+    error_log(message: "TripalEntityViewsData::getViewsData");
     $data['tripal_entity']['table']['base'] = array(
       'field' => 'id',
       'title' => $this->t('Tripal Content'),
