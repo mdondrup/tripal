@@ -6,6 +6,8 @@ use Drupal\views\EntityViewsData;
 use Drupal\views\EntityViewsDataInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Entity\Sql\TableMappingInterface;
+use Drupal\Core\Entity\Sql\DefaultTableMapping;
+
 use Drupal\Core\Field\BaseFieldDefinition;
 
 /**
@@ -79,11 +81,19 @@ class TripalEntityViewsData extends EntityViewsData implements EntityViewsDataIn
 
     // create the field _definition:
     $new_field_definition = BaseFieldDefinition::createFromFieldStorageDefinition($fieldStorageDefinitions[$field_name]);
+    //echo ($table_mapping->requiresDedicatedTableStorage($fieldStorageDefinitions[$field_name]));  
+    //var_dump($table_mapping->getTableNames()); // only the base table here... 
+    //var_dump($table_mapping->getExtraColumns('organism'));
 
+    // do the mapping. But is the $table_mapping argument correct?
+    // create a DefaultTableMapping:
+    $new_table_mapping =  DefaultTableMapping::create($this->entityType, $fieldStorageDefinitions, 'chado.');
+    // DO NOT RUN THIS
+    $this->mapFieldDefinition($table, $field_name, $new_field_definition,
+      $new_table_mapping,  $data[$base_table]);
 
-    $this->mapFieldDefinition($table, $field_name, $new_field_definition, 
-        $table_mapping,  $data[$base_table]);
-
+    // A View created on this field throws an Ajax error. The table mapping needs to be modified to support the field, too.    
+    // This creates a circular reference with an infinite loop which filled the partition with the error log of the web server :(
   
     return $data;
   }
