@@ -6,7 +6,7 @@ use Drupal\views\EntityViewsData;
 use Drupal\views\EntityViewsDataInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Entity\Sql\TableMappingInterface;
-
+use Drupal\Core\Field\BaseFieldDefinition;
 
 /**
  * Provides Views data for Tripal Content entities.
@@ -19,6 +19,9 @@ class TripalEntityViewsData extends EntityViewsData implements EntityViewsDataIn
                                         TableMappingInterface $table_mapping, &$table_data) {
     error_log('TripalEntityViewsData::mapFieldDefinition');
     error_log($table .' : '. $field_name .'');
+    //error_log(var_export($field_definition, TRUE));
+    //error_log(var_export($table_mapping, TRUE));
+
     parent::mapFieldDefinition($table, $field_name, $field_definition, $table_mapping, $table_data);  
 
   }
@@ -49,9 +52,9 @@ class TripalEntityViewsData extends EntityViewsData implements EntityViewsDataIn
            ->id());
     // get the field map for our field. This is possible for any field
     $field_map = $this->entityFieldManager->getFieldMap()[$entityType][$field_name];
-    // now try to get the fieldDefinition object:
+    // now try to get the fieldDefinition object. This will return only the base fields....
     $my_field_definitions = $this->entityFieldManager->getFieldDefinitions('tripal_entity', $field_name);
-    var_dump(array_keys($my_field_definitions));
+    //var_dump(array_keys($my_field_definitions));
     $table_mapping = $this->storage
             ->getTableMapping($field_definitions);
 
@@ -67,14 +70,19 @@ class TripalEntityViewsData extends EntityViewsData implements EntityViewsDataIn
     error_log($base_table);
     $fieldStorageDefinitions = $this->fieldStorageDefinitions;
     $table = 'chado.organism';
-    error_log("retrieving field map and storage definition for '$field_name':");
-    error_log(var_export($field_map, return: true));
-    error_log(var_export($fieldStorageDefinitions[$field_name]->getSettings(), TRUE));
+    // error_log("retrieving field map and storage definition for '$field_name':");
+    //error_log(var_export($field_map, return: true));
+    //error_log(var_export($fieldStorageDefinitions[$field_name]->getSettings(), TRUE));
 
     // If we could map each (foreign) Tripal content field, this might generate the join operations we need
     // We have access to the fieldStoragedefinitions but not the field definitions
-    // $this->mapFieldDefinition($table, $field_name, $field_definition, 
-    //  $table_mapping,  $data[$base_table]);
+
+    // create the field _definition:
+    $new_field_definition = BaseFieldDefinition::createFromFieldStorageDefinition($fieldStorageDefinitions[$field_name]);
+
+
+    $this->mapFieldDefinition($table, $field_name, $new_field_definition, 
+        $table_mapping,  $data[$base_table]);
 
   
     return $data;
