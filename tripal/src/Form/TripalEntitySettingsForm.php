@@ -62,10 +62,11 @@ class TripalEntitySettingsForm extends FormBase {
     $form['default_cache_backend_field_values'] = [
       '#type' => 'checkbox',
       '#title' => t('Cache Backend Storage field values in Drupal'),
-      '#description' => t('When enabled, a copy of data from the backend storage will be stored in the Drupal'
-        . 'field tables.'
-        . 'This is needed for Drupal views filtering and sorting! Changing this setting does not affect already published content.'
-        . 'When this value is changed on a populated site to take effect, all Tripal Content needs to be re-published.'),
+      '#description' => t('When enabled, a copy of data from the backend storage will be stored in the Drupal field tables.'
+        . 'This is needed for Drupal views filtering and sorting and is recommended for most sites.'
+        . 'Changing this setting does not affect already published content.'
+        . 'When this option is changed from OFF to ON on an already populated site, all Tripal Content needs to be re-published to take effect.'
+        . 'Note: values that have already been cached will not be removed when turning switching option OFF.'),
       '#default_value' => $drupal_entity_field_store,
       '#required' => false,
     ];
@@ -110,14 +111,10 @@ class TripalEntitySettingsForm extends FormBase {
     $allowed_title_tags = preg_replace('/ +/', ' ', $allowed_title_tags);
 
     // Update configuration
-    \Drupal::configFactory()
-      ->getEditable('tripal.settings')
-      ->set('tripal_entity_type.allowed_title_tags', $allowed_title_tags)
-      ->save();
-      \Drupal::configFactory()
-      ->getEditable('tripal.settings')
-      ->set('tripal_entity_type.default_cache_backend_field_values', $drupal_entity_field_store)
-      ->save();
+    $config_edit = \Drupal::configFactory()->getEditable('tripal.settings');
+    $config_edit->set('tripal_entity_type.allowed_title_tags', $allowed_title_tags);
+    $config_edit->set('tripal_entity_type.default_cache_backend_field_values', $drupal_entity_field_store);
+    $config_edit->save();
 
     $this->messenger()->addStatus('Settings have been saved.');
   }
