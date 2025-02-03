@@ -150,7 +150,7 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
       $base_tables[$base_table] = $base_table;
     }
     else {
-      $base_tables[NULL] = '-- Select --';
+      $base_tables[NULL] = '- Select -';
       $chado = \Drupal::service('tripal_chado.database');
       $schema = $chado->schema();
       $tables = $schema->getTables(['type' => 'table', 'status' => 'base']);
@@ -507,7 +507,7 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
     }
     // If more than one table was found, prefix the list with a Select message
     elseif (count($base_tables) > 1) {
-      $base_tables = [NULL => '-- Select --'] + $base_tables;
+      $base_tables = [NULL => '- Select -'] + $base_tables;
     }
 
     return $base_tables;
@@ -531,7 +531,7 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
     $select_list = [];
 
     if (!$table_name) {
-      $select_list[NULL] = '-- Select base table first --';
+      $select_list[NULL] = '- Select base table first -';
     }
     else {
       $column_names = $this->getTableColumns($table_name, $column_types);
@@ -544,7 +544,7 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
       // If more than one item was found, prefix the list with a Select message
       elseif (count($select_list) > 1) {
         ksort($select_list);
-        $select_list = [NULL => '-- Select --'] + $select_list;
+        $select_list = [NULL => '- Select -'] + $select_list;
       }
     }
 
@@ -606,7 +606,7 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
     // The base table is needed to generate the list. We will return
     // here again from the ajax callback once that has been selected.
     if (!$base_table) {
-      $select_list[NULL] = '-- Select base table first --';
+      $select_list[NULL] = '- Select base table first -';
     }
     else {
       $linker_tables = $this->getLinkerTables($object_table, $base_table);
@@ -622,7 +622,7 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
         // If more than one item was found, prefix the list with a Select message
         if (count($linker_tables) > 1) {
           ksort($select_list);
-          $select_list = [NULL => '-- Select --'] + $select_list;
+          $select_list = [NULL => '- Select -'] + $select_list;
         }
       }
     }
@@ -766,7 +766,7 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
    */
   protected static function createFieldEntry(TripalEntityType $bundle, array $options): array {
     $field_item = [
-      'name' => self::generateFieldName($bundle, $options['table'], 0),
+      'name' => $options['name'] ?? self::generateFieldName($bundle, $options['table'], 0),
       'content_type' => $bundle->getID(),
       'label' => $options['label'],
       'type' => $options['id'],
@@ -830,6 +830,8 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
    * @param array $options
    *   Specific options from the field's discover() function. Required keys:
    *   - id: the field id, e.g. 'chado_organism_type_default'
+   *   - name: the unique name for a specific field instance. The default is
+   *     generated using generateFieldName().
    *   - base_table: the base table of the entity
    *   - table: the field's table, e.g. 'organism'
    *   - label: the field's label, e.g. 'Organism'
@@ -895,6 +897,8 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
    * @param array $options
    *   Specific options from the field's discover() function. Required keys:
    *   - id: the field id, e.g. 'chado_organism_type_default'
+   *   - name: the unique name for a specific field instance. The default is
+   *     generated using generateFieldName().
    *   - base_table: the base table of the entity
    *   - table: the field's table, e.g. 'organism'
    *   - label: the field's label, e.g. 'Organism'
@@ -998,6 +1002,8 @@ abstract class ChadoFieldItemBase extends TripalFieldItemBase {
    * @param array $options
    *   Specific options from the field's discover() function. Required keys:
    *   - id: the field id, e.g. 'chado_organism_type_default'
+   *   - name: the unique name for a specific field instance. The default is
+   *     generated using generateFieldName().
    *   - table: the field's table, e.g. 'organism'
    *   - label: the field's label, e.g. 'Organism'
    *   - termIdSpace: The field term's DB
